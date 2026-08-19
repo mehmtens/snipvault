@@ -13,6 +13,7 @@ import (
 	"snipvault/internal/auth"
 	"snipvault/internal/database"
 	"snipvault/internal/httpapi"
+	"snipvault/internal/mailer"
 )
 
 var (
@@ -67,7 +68,8 @@ func initializeApp() error {
 	}
 
 	pasteStore := database.NewPasteStore(pool)
-	authService := auth.NewService(database.NewUserStore(pool), jwtSecret)
+	emailSender := mailer.NewBrevo(os.Getenv("BREVO_API_KEY"), os.Getenv("MAIL_FROM_EMAIL"), os.Getenv("MAIL_FROM_NAME"))
+	authService := auth.NewService(database.NewUserStore(pool), jwtSecret, emailSender)
 	app = httpapi.NewHandler(pasteStore, authService)
 	return nil
 }

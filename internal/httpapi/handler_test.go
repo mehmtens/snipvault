@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,8 +12,28 @@ import (
 	"snipvault/internal/user"
 )
 
+type testMailer struct {
+	verificationCode string
+	resetCode        string
+}
+
+func (m *testMailer) SendVerification(_ context.Context, _ string, code string) error {
+	m.verificationCode = code
+	return nil
+}
+func (m *testMailer) SendPasswordReset(_ context.Context, _ string, code string) error {
+	m.resetCode = code
+	return nil
+}
+
 func testHandler() http.Handler {
-	return NewHandler(paste.NewMemoryStore(), auth.NewService(user.NewMemoryStore(), "test-secret-that-is-long-enough-for-tests"))
+	handler, _ := testHandlerWithMailer()
+	return handler
+}
+
+func testHandlerWithMailer() (http.Handler, *testMailer) {
+	sender := &testMailer{}
+	return NewHandler(paste.NewMemoryStore(), auth.NewService(user.NewMemoryStore(), "test-secret-that-is-long-enough-for-tests", sender)), sender
 }
 
 func TestHomePage(t *testing.T) {

@@ -161,21 +161,19 @@ if (!pathMatch && editDraft) {
 const authDialog = document.querySelector('#auth-dialog');
 const accountButton = document.querySelector('#account-button');
 const myPastesButton = document.querySelector('#my-pastes-button');
+const accountDialog = document.querySelector('#account-dialog');
 let savedUser = JSON.parse(sessionStorage.getItem('snipvault_user') || 'null');
 if (savedUser && !sessionStorage.getItem('snipvault_csrf')) {
 	sessionStorage.removeItem('snipvault_user');
 	sessionStorage.removeItem('snipvault_token');
 	savedUser = null;
 }
-if (savedUser) { accountButton.textContent = `${savedUser.username} · Sign out`; myPastesButton.hidden = false; }
+function syncAccount(user) { savedUser = user; accountButton.textContent = user ? user.username : 'Sign in'; myPastesButton.hidden = !user; }
+if (savedUser) syncAccount(savedUser);
 
 accountButton.addEventListener('click', async () => {
 	if (sessionStorage.getItem('snipvault_user')) {
-		await fetch('/logout', {method: 'POST', headers: authHeaders()});
-		sessionStorage.removeItem('snipvault_csrf');
-		sessionStorage.removeItem('snipvault_user');
-    accountButton.textContent = 'Sign in';
-    myPastesButton.hidden = true;
+		await loadProfile(); accountDialog.showModal();
     return;
   }
   authDialog.showModal();
@@ -187,7 +185,11 @@ document.querySelectorAll('.auth-tab').forEach(tab => tab.addEventListener('clic
   document.querySelectorAll('.auth-tab').forEach(item => item.classList.toggle('active', item === tab));
   document.querySelector('#login-panel').hidden = tab.dataset.panel !== 'login-panel';
   document.querySelector('#register-panel').hidden = tab.dataset.panel !== 'register-panel';
+  ['verify-panel','forgot-panel','reset-panel'].forEach(id => document.querySelector(`#${id}`).hidden = true);
 }));
+
+function showAuthPanel(id) { ['login-panel','register-panel','verify-panel','forgot-panel','reset-panel'].forEach(name => document.querySelector(`#${name}`).hidden = name !== id); document.querySelector('.auth-tabs').hidden = !['login-panel','register-panel'].includes(id); }
+function storeSession(result) { sessionStorage.setItem('snipvault_csrf', result.csrf_token); sessionStorage.setItem('snipvault_user', JSON.stringify(result.user)); syncAccount(result.user); authDialog.close(); }
 
 async function submitAuth(form, endpoint) {
   const formData = new FormData(form);
@@ -200,12 +202,9 @@ async function submitAuth(form, endpoint) {
     const body = Object.fromEntries(formData.entries());
     const response = await fetch(endpoint, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Request failed');
-		sessionStorage.setItem('snipvault_csrf', result.csrf_token);
-    sessionStorage.setItem('snipvault_user', JSON.stringify(result.user));
-    accountButton.textContent = `${result.user.username} · Sign out`;
-    myPastesButton.hidden = false;
-    authDialog.close();
+    if (!response.ok) { if (endpoint === '/login' && response.status === 403) { document.querySelector('#verify-panel [name=email]').value = body.email; document.querySelector('#verify-email-label').textContent = body.email; showAuthPanel('verify-panel'); } throw new Error(result.error || 'Request failed'); }
+    if (endpoint === '/register') { document.querySelector('#verify-panel [name=email]').value = result.email; document.querySelector('#verify-email-label').textContent = result.email; showAuthPanel('verify-panel'); document.querySelector('#verify-panel .code-input').focus(); return; }
+		storeSession(result);
     form.reset();
   } catch (error) {
     status.textContent = error.message;
@@ -214,6 +213,19 @@ async function submitAuth(form, endpoint) {
 }
 document.querySelector('#login-panel').addEventListener('submit', event => { event.preventDefault(); submitAuth(event.currentTarget, '/login'); });
 document.querySelector('#register-panel').addEventListener('submit', event => { event.preventDefault(); submitAuth(event.currentTarget, '/register'); });
+document.querySelector('#verify-panel').addEventListener('submit', async event => { event.preventDefault(); const form = event.currentTarget; const status = form.querySelector('.auth-message'); const response = await fetch('/verify-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form)))}); const result=await response.json(); if(response.ok){storeSession(result)}else{status.textContent=result.error;status.classList.add('error')} });
+document.querySelector('#resend-code').addEventListener('click', async () => { const email=document.querySelector('#verify-panel [name=email]').value; const status=document.querySelector('#verify-panel .auth-message'); const response=await fetch('/resend-verification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const result=await response.json(); status.textContent=result.message||result.error; status.classList.toggle('error',!response.ok); });
+document.querySelector('#forgot-link').addEventListener('click',()=>showAuthPanel('forgot-panel')); document.querySelectorAll('.back-login').forEach(button=>button.addEventListener('click',()=>showAuthPanel('login-panel')));
+document.querySelector('#forgot-panel').addEventListener('submit', async event=>{event.preventDefault();const form=event.currentTarget,email=new FormData(form).get('email'),status=form.querySelector('.auth-message');const response=await fetch('/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const result=await response.json();if(!response.ok){status.textContent=result.error;status.classList.add('error');return}document.querySelector('#reset-panel [name=email]').value=email;showAuthPanel('reset-panel');});
+document.querySelector('#reset-panel').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,status=form.querySelector('.auth-message');const response=await fetch('/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){showAuthPanel('login-panel');document.querySelector('#login-panel .auth-message').textContent='Password updated. Sign in with your new password.';form.reset();return}const result=await response.json();status.textContent=result.error;status.classList.add('error');});
+
+async function loadProfile(){const response=await fetch('/me/profile',{headers:authHeaders()});if(!response.ok)return;const user=await response.json();document.querySelector('#profile-form [name=username]').value=user.username;document.querySelector('#profile-form [name=email]').value=user.email;}
+document.querySelector('#close-account').addEventListener('click',()=>accountDialog.close()); accountDialog.addEventListener('click',event=>{if(event.target===accountDialog)accountDialog.close()});
+async function logout(){await fetch('/logout',{method:'POST',headers:authHeaders()});sessionStorage.removeItem('snipvault_csrf');sessionStorage.removeItem('snipvault_user');syncAccount(null);accountDialog.close();}
+document.querySelector('#sign-out-button').addEventListener('click',logout);
+document.querySelector('#profile-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,status=form.querySelector('.auth-message'),username=new FormData(form).get('username');const response=await fetch('/me/profile',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username})});const result=await response.json();status.textContent=response.ok?'Profile saved.':result.error;status.classList.toggle('error',!response.ok);if(response.ok){sessionStorage.setItem('snipvault_user',JSON.stringify(result));syncAccount(result)}});
+document.querySelector('#password-form').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,status=form.querySelector('.auth-message');const response=await fetch('/me/password',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(Object.fromEntries(new FormData(form)))});status.textContent=response.ok?'Password changed.':(await response.json()).error;status.classList.toggle('error',!response.ok);if(response.ok)form.reset()});
+document.querySelector('#delete-account-form').addEventListener('submit',async event=>{event.preventDefault();if(!confirm('Delete your account and every paste permanently? This cannot be undone.'))return;const form=event.currentTarget,status=form.querySelector('.auth-message');const response=await fetch('/me/account',{method:'DELETE',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(Object.fromEntries(new FormData(form)))});if(response.ok){sessionStorage.clear();window.location.assign('/');return}status.textContent=(await response.json()).error;status.classList.add('error')});
 
 const pastesDialog = document.querySelector('#pastes-dialog');
 const pastesList = document.querySelector('#pastes-list');

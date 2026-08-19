@@ -85,6 +85,9 @@ go run ./cmd/api
 | --- | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection URL | `postgres://postgres:password@localhost:5432/snipvault?sslmode=disable` |
 | `JWT_SECRET` | JWT HMAC key; minimum 32 characters | Random 256-bit value |
+| `BREVO_API_KEY` | Brevo transactional email API key | Brevo SMTP & API dashboard |
+| `MAIL_FROM_EMAIL` | Verified Brevo sender address | `hello@example.com` |
+| `MAIL_FROM_NAME` | Sender display name | `SnipVault` |
 | `PORT` | HTTP listen port | `8090` |
 | `CLEANUP_INTERVAL` | Expired-paste cleanup frequency | `5m` |
 
@@ -95,9 +98,16 @@ Never commit `.env` or `.env.docker`. Both are ignored by Git and excluded from 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Service health |
-| `POST` | `/register` | Create account and session |
+| `POST` | `/register` | Create an unverified account and email a code |
+| `POST` | `/verify-email` | Verify email and start session |
+| `POST` | `/resend-verification` | Send a new verification code |
 | `POST` | `/login` | Start session |
 | `POST` | `/logout` | End session |
+| `POST` | `/forgot-password` | Email a password reset code |
+| `POST` | `/reset-password` | Reset password with a valid code |
+| `GET/PATCH` | `/me/profile` | Read or update profile |
+| `POST` | `/me/password` | Change password |
+| `DELETE` | `/me/account` | Permanently delete account |
 | `POST` | `/pastes` | Create paste |
 | `GET` | `/pastes/{slug}` | Read visible paste |
 | `GET` | `/raw/{slug}` | Read raw content |
