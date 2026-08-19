@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: snipvault
+      POSTGRES_USER: snipvault
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.docker}
+    volumes:
+      - snipvault_postgres_v18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U snipvault -d snipvault"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - snipvault_internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://snipvault:${POSTGRES_PASSWORD}@db:5432/snipvault?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.docker}
+      PORT: "8090"
+      CLEANUP_INTERVAL: "5m"
+    ports:
+      - "8090:8090"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - snipvault_internal
+
+volumes:
+  snipvault_postgres_v18:
+
+networks:
+  snipvault_internal:
+    driver: bridge

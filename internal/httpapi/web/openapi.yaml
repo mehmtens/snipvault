@@ -1,0 +1,121 @@
+openapi: 3.1.0
+info:
+  title: SnipVault API
+  version: 1.0.0
+  description: Secure API for storing and sharing code or text pastes.
+servers:
+  - url: http://localhost:8090
+paths:
+  /health:
+    get:
+      summary: Check service health
+      responses:
+        '200': {description: Healthy, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+  /register:
+    post:
+      summary: Register a user and start a browser session
+      requestBody: {$ref: '#/components/requestBodies/Register'}
+      responses:
+        '201': {$ref: '#/components/responses/AuthSuccess'}
+        '400': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /login:
+    post:
+      summary: Authenticate and start a browser session
+      requestBody: {$ref: '#/components/requestBodies/Login'}
+      responses:
+        '200': {$ref: '#/components/responses/AuthSuccess'}
+        '401': {$ref: '#/components/responses/Error'}
+  /logout:
+    post:
+      summary: End the browser session
+      security: [{cookieAuth: [], csrfToken: []}]
+      responses:
+        '204': {description: Logged out}
+        '403': {$ref: '#/components/responses/Error'}
+  /pastes:
+    post:
+      summary: Create a paste
+      security: [{}, {cookieAuth: [], csrfToken: []}, {bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/PasteInput'}
+      responses:
+        '201': {description: Created, content: {application/json: {schema: {$ref: '#/components/schemas/Paste'}}}}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+  /pastes/{slug}:
+    parameters: [{$ref: '#/components/parameters/Slug'}]
+    get:
+      summary: Get a visible paste
+      security: [{}, {cookieAuth: []}, {bearerAuth: []}]
+      responses:
+        '200': {description: Paste, content: {application/json: {schema: {$ref: '#/components/schemas/Paste'}}}}
+        '404': {$ref: '#/components/responses/Error'}
+    put:
+      summary: Update an owned paste
+      security: [{cookieAuth: [], csrfToken: []}, {bearerAuth: []}]
+      requestBody: {$ref: '#/components/requestBodies/PasteInput'}
+      responses:
+        '200': {description: Updated, content: {application/json: {schema: {$ref: '#/components/schemas/Paste'}}}}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+    delete:
+      summary: Delete an owned paste
+      security: [{cookieAuth: [], csrfToken: []}, {bearerAuth: []}]
+      responses:
+        '204': {description: Deleted}
+        '401': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+  /raw/{slug}:
+    get:
+      summary: Get raw paste content
+      security: [{}, {cookieAuth: []}, {bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/Slug'}]
+      responses:
+        '200': {description: Raw content, content: {text/plain: {schema: {type: string}}}}
+        '404': {description: Not found}
+  /me/pastes:
+    get:
+      summary: List current user's active pastes
+      security: [{cookieAuth: []}, {bearerAuth: []}]
+      responses:
+        '200': {description: Pastes, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/Paste'}}}}}
+        '401': {$ref: '#/components/responses/Error'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+    cookieAuth: {type: apiKey, in: cookie, name: snipvault_session}
+    csrfToken: {type: apiKey, in: header, name: X-CSRF-Token}
+  parameters:
+    Slug: {name: slug, in: path, required: true, schema: {type: string}, example: a8K3xQpL}
+  schemas:
+    Health: {type: object, required: [status], properties: {status: {type: string, example: ok}}}
+    Error: {type: object, required: [error], properties: {error: {type: string}}}
+    User:
+      type: object
+      required: [id, username, email, created_at]
+      properties: {id: {type: integer, format: int64}, username: {type: string}, email: {type: string, format: email}, created_at: {type: string, format: date-time}}
+    Paste:
+      type: object
+      required: [slug, title, content, language, visibility, created_at, updated_at]
+      properties:
+        slug: {type: string}
+        title: {type: string}
+        content: {type: string}
+        language: {type: string}
+        visibility: {type: string, enum: [public, unlisted, private]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        expires_at: {type: [string, 'null'], format: date-time}
+  requestBodies:
+    Register:
+      required: true
+      content: {application/json: {schema: {type: object, required: [username, email, password], properties: {username: {type: string, minLength: 3, maxLength: 50}, email: {type: string, format: email}, password: {type: string, minLength: 8, maxLength: 72}}}}}
+    Login:
+      required: true
+      content: {application/json: {schema: {type: object, required: [email, password], properties: {email: {type: string, format: email}, password: {type: string}}}}}
+    PasteInput:
+      required: true
+      content: {application/json: {schema: {type: object, required: [content], properties: {title: {type: string, maxLength: 200}, content: {type: string}, language: {type: string}, visibility: {type: string, enum: [public, unlisted, private]}, expires_in: {type: string, enum: [never, 10m, 1h, 24h, 7d]}}}}}
+  responses:
+    Error: {description: Error, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+    AuthSuccess: {description: Authenticated, headers: {Set-Cookie: {schema: {type: string}}}, content: {application/json: {schema: {type: object, required: [user, csrf_token], properties: {user: {$ref: '#/components/schemas/User'}, csrf_token: {type: string}}}}}}

@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.docker.example
+bin/
+coverage.out
+design-system/
+README.md

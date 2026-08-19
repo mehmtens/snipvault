@@ -1,0 +1,16 @@
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+@media (max-width: 560px) {
+  .result-toolbar {
+    align-items: flex-start;
+  }
+
+  .result-actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Share code and text with a clean, durable link.">
+  <title>SnipVault — Keep a thought. Share the link.</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/actions.css">
+  <link rel="stylesheet" href="/assets/pro-theme.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="SnipVault home"><span class="brand-mark" aria-hidden="true">S/</span><span>SnipVault</span></a>
+    <div class="header-actions"><span class="status"><i aria-hidden="true"></i> Ready to paste</span><button id="my-pastes-button" class="account-button" type="button" hidden>My pastes</button><button id="account-button" class="account-button" type="button">Sign in</button></div>
+  </header>
+  <main>
+    <section id="editor-view" class="workspace" aria-labelledby="page-title">
+      <div class="intro">
+        <p class="eyebrow">A quiet place for loud ideas</p>
+        <h1 id="page-title">Keep a thought.<br><em>Share the link.</em></h1>
+        <p class="lede">Drop in code, notes, or the fix you do not want to lose. SnipVault gives it one clean address.</p>
+      </div>
+      <form id="paste-form" class="paste-card">
+        <div class="card-toolbar">
+          <label class="title-field"><span class="sr-only">Title</span><input id="title" maxlength="200" placeholder="Untitled snippet"></label>
+          <div class="toolbar-controls">
+            <label><span class="sr-only">Language</span><select id="language"><option value="text">Plain text</option><option value="go">Go</option><option value="java">Java</option><option value="c">C</option><option value="cpp">C++</option><option value="csharp">C#</option><option value="javascript">JavaScript</option><option value="typescript">TypeScript</option><option value="python">Python</option><option value="sql">SQL</option><option value="json">JSON</option></select></label>
+            <label><span class="sr-only">Visibility</span><select id="visibility"><option value="unlisted">Unlisted</option><option value="public">Public</option><option value="private">Private</option></select></label>
+            <label><span class="sr-only">Expiration</span><select id="expires-in"><option value="never">Never expires</option><option value="10m">10 minutes</option><option value="1h">1 hour</option><option value="24h">1 day</option><option value="7d">7 days</option></select></label>
+          </div>
+        </div>
+        <div class="editor-shell">
+          <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+          <label class="editor-label"><span class="sr-only">Paste content</span><textarea id="content" required spellcheck="false" placeholder="Paste code or write something worth keeping…"></textarea></label>
+        </div>
+        <div class="card-footer">
+          <p id="form-message" class="form-message" role="status">Up to 1 MB · stored in your vault</p>
+          <button id="create-button" type="submit">Create link <span aria-hidden="true">↗</span></button>
+        </div>
+      </form>
+    </section>
+    <section id="paste-view" class="workspace paste-result" hidden aria-labelledby="paste-title">
+      <div class="result-heading">
+        <a class="back-link" href="/">← New paste</a>
+        <p class="eyebrow">Stored in SnipVault</p>
+        <h1 id="paste-title">Untitled snippet</h1>
+        <div class="result-meta"><span id="paste-language">text</span><span id="paste-date"></span><span id="paste-expiration">Never expires</span></div>
+      </div>
+      <article class="paste-card result-card">
+        <div class="card-toolbar result-toolbar"><span id="paste-visibility">Unlisted</span><div class="result-actions"><button id="copy-code-button" class="copy-button" type="button">Copy code</button><button id="raw-button" class="copy-button" type="button">Raw</button><button id="download-button" class="copy-button" type="button">Download</button><button id="copy-button" class="copy-button" type="button">Copy link</button></div></div>
+        <div class="editor-shell result-shell"><div id="result-lines" class="line-numbers" aria-hidden="true">1</div><pre><code id="paste-content" class="syntax-code"></code></pre></div>
+      </article>
+    </section>
+  </main>
+  <footer><span>SnipVault</span><span>Small text. Durable links.</span></footer>
+  <dialog id="auth-dialog" class="auth-dialog">
+    <button id="close-auth" class="dialog-close" type="button" aria-label="Close">×</button>
+    <div class="auth-copy"><p class="eyebrow">Your private corner</p><h2>Keep your vault close.</h2><p>Create an account to build a collection of snippets you can return to.</p></div>
+    <div class="auth-forms">
+      <div class="auth-tabs" role="tablist"><button class="auth-tab active" type="button" data-panel="login-panel">Sign in</button><button class="auth-tab" type="button" data-panel="register-panel">Create account</button></div>
+      <form id="login-panel" class="auth-form">
+        <label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters"></label>
+        <p class="auth-message" role="status"></p><button type="submit">Sign in</button>
+      </form>
+      <form id="register-panel" class="auth-form" hidden>
+        <label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="50" placeholder="Your name"></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="At least 8 characters"></label>
+        <p class="auth-message" role="status"></p><button type="submit">Create account</button>
+      </form>
+    </div>
+  </dialog>
+  <dialog id="pastes-dialog" class="pastes-dialog">
+    <div class="pastes-heading"><div><p class="eyebrow">Your collection</p><h2>My pastes</h2></div><button id="close-pastes" class="dialog-close" type="button" aria-label="Close">×</button></div>
+    <div id="pastes-list" class="pastes-list"><p class="empty-state">Loading your pastes…</p></div>
+  </dialog>
+</body>
+</html>
