@@ -10,9 +10,21 @@ import (
 
 func TestPrivatePasteOwnership(t *testing.T) {
 	handler, sender := testHandlerWithMailer()
-	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"owner","email":"owner@example.com","password":"password123"}`)); registered := httptest.NewRecorder(); handler.ServeHTTP(registered, register)
-	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"owner@example.com","code":"`+sender.verificationCode+`"}`)); verified := httptest.NewRecorder(); handler.ServeHTTP(verified, verify)
-	var token string; for _, cookie := range verified.Result().Cookies() { if cookie.Name == "snipvault_session" { token = cookie.Value } }; if token == "" { t.Fatal("session cookie not found") }
+	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"owner","email":"owner@example.com","password":"password123"}`))
+	registered := httptest.NewRecorder()
+	handler.ServeHTTP(registered, register)
+	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"owner@example.com","code":"`+sender.verificationCode+`"}`))
+	verified := httptest.NewRecorder()
+	handler.ServeHTTP(verified, verify)
+	var token string
+	for _, cookie := range verified.Result().Cookies() {
+		if cookie.Name == "snipvault_session" {
+			token = cookie.Value
+		}
+	}
+	if token == "" {
+		t.Fatal("session cookie not found")
+	}
 
 	create := httptest.NewRequest(http.MethodPost, "/pastes", strings.NewReader(`{"title":"Secret","content":"private text","visibility":"private"}`))
 	create.Header.Set("Authorization", "Bearer "+token)
@@ -78,7 +90,9 @@ func TestCookieAuthenticationRequiresCSRF(t *testing.T) {
 	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"cookieuser","email":"cookie@example.com","password":"password123"}`))
 	registered := httptest.NewRecorder()
 	handler.ServeHTTP(registered, register)
-	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"cookie@example.com","code":"`+sender.verificationCode+`"}`)); verified := httptest.NewRecorder(); handler.ServeHTTP(verified, verify)
+	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"cookie@example.com","code":"`+sender.verificationCode+`"}`))
+	verified := httptest.NewRecorder()
+	handler.ServeHTTP(verified, verify)
 	var body struct {
 		CSRFToken string `json:"csrf_token"`
 	}

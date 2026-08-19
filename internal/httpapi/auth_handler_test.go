@@ -24,8 +24,11 @@ func TestRegisterAndLogin(t *testing.T) {
 		t.Fatalf("expected 202, got %d: %s", registerResponse.Code, registerResponse.Body.String())
 	}
 	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"mehmet@example.com","code":"`+sender.verificationCode+`"}`))
-	verifyResponse := httptest.NewRecorder(); handler.ServeHTTP(verifyResponse, verify)
-	if verifyResponse.Code != http.StatusOK { t.Fatalf("verification failed: %s", verifyResponse.Body.String()) }
+	verifyResponse := httptest.NewRecorder()
+	handler.ServeHTTP(verifyResponse, verify)
+	if verifyResponse.Code != http.StatusOK {
+		t.Fatalf("verification failed: %s", verifyResponse.Body.String())
+	}
 	var sessionCookie *http.Cookie
 	for _, cookie := range verifyResponse.Result().Cookies() {
 		if cookie.Name == "snipvault_session" {
