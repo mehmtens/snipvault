@@ -106,6 +106,8 @@ Never commit `.env` or `.env.docker`. Both are ignored by Git and excluded from 
 | `POST` | `/forgot-password` | Email a password reset code |
 | `POST` | `/reset-password` | Reset password with a valid code |
 | `GET/PATCH` | `/me/profile` | Read or update profile |
+| `GET` | `/me/pastes?q=&language=&visibility=&favorite=` | Search and filter owned pastes |
+| `PATCH` | `/pastes/{slug}/favorite` | Add or remove an owned paste from favorites |
 | `POST` | `/me/password` | Change password |
 | `DELETE` | `/me/account` | Permanently delete account |
 | `POST` | `/pastes` | Create paste |

@@ -101,12 +101,47 @@ func (h *handler) myPastes(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
 		return
 	}
-	values, err := h.store.ListByUser(r.Context(), userID)
+	favoritesOnly := r.URL.Query().Get("favorite") == "true"
+	values, err := h.store.ListByUser(r.Context(), userID, paste.ListOptions{
+		Query: strings.TrimSpace(r.URL.Query().Get("q")), Language: strings.TrimSpace(r.URL.Query().Get("language")),
+		Visibility: strings.TrimSpace(r.URL.Query().Get("visibility")), FavoritesOnly: favoritesOnly,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "pastes could not be loaded"})
 		return
 	}
 	writeJSON(w, http.StatusOK, values)
+}
+
+type favoriteRequest struct {
+	Favorite bool `json:"favorite"`
+}
+
+func (h *handler) setFavorite(w http.ResponseWriter, r *http.Request) {
+	userID, authenticated, err := h.currentUserID(r)
+	if err != nil || !authenticated {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	if !h.validCSRF(r) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "invalid CSRF token"})
+		return
+	}
+	var input favoriteRequest
+	if decodeJSON(w, r, &input) != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+	value, err := h.store.SetFavorite(r.Context(), r.PathValue("slug"), userID, input.Favorite)
+	if errors.Is(err, paste.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "paste not found"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "favorite could not be updated"})
+		return
+	}
+	writeJSON(w, http.StatusOK, value)
 }
 
 func (h *handler) deletePaste(w http.ResponseWriter, r *http.Request) {

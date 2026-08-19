@@ -53,6 +53,7 @@ func NewHandler(store paste.Store, authService *auth.Service) http.Handler {
 	mux.HandleFunc("DELETE /pastes/{slug}", h.deletePaste)
 	mux.HandleFunc("PUT /pastes/{slug}", h.updatePaste)
 	mux.HandleFunc("GET /me/pastes", h.myPastes)
+	mux.HandleFunc("PATCH /pastes/{slug}/favorite", h.setFavorite)
 	generalLimiter := middleware.NewRateLimiter(120, time.Minute)
 	return middleware.SecurityHeaders(middleware.RequestID(middleware.Logging(generalLimiter.Handler(mux))))
 }
