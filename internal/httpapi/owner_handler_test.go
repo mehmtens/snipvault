@@ -68,6 +68,22 @@ func TestPrivatePasteOwnership(t *testing.T) {
 		t.Fatalf("owner should list paste: %s", listed.Body.String())
 	}
 
+	favorite := httptest.NewRequest(http.MethodPatch, "/pastes/"+value.Slug+"/favorite", strings.NewReader(`{"favorite":true}`))
+	favorite.Header.Set("Authorization", "Bearer "+token)
+	favorited := httptest.NewRecorder()
+	handler.ServeHTTP(favorited, favorite)
+	if favorited.Code != http.StatusOK || !strings.Contains(favorited.Body.String(), `"is_favorite":true`) {
+		t.Fatalf("owner should favorite paste: %s", favorited.Body.String())
+	}
+
+	filtered := httptest.NewRequest(http.MethodGet, "/me/pastes?q=Secret&visibility=private&favorite=true", nil)
+	filtered.Header.Set("Authorization", "Bearer "+token)
+	filteredResponse := httptest.NewRecorder()
+	handler.ServeHTTP(filteredResponse, filtered)
+	if filteredResponse.Code != http.StatusOK || !strings.Contains(filteredResponse.Body.String(), "Secret") {
+		t.Fatalf("favorite filters should return paste: %s", filteredResponse.Body.String())
+	}
+
 	update := httptest.NewRequest(http.MethodPut, "/pastes/"+value.Slug, strings.NewReader(`{"title":"Updated secret","content":"updated text","language":"text","visibility":"private","expires_in":"never"}`))
 	update.Header.Set("Authorization", "Bearer "+token)
 	updated := httptest.NewRecorder()

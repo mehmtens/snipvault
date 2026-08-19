@@ -235,18 +235,28 @@ document.querySelector('#delete-account-form').addEventListener('submit',async e
 
 const pastesDialog = document.querySelector('#pastes-dialog');
 const pastesList = document.querySelector('#pastes-list');
+const pasteFilters = document.querySelector('#paste-filters');
+const pasteResultsStatus = document.querySelector('#paste-results-status');
+const clearFilters = document.querySelector('#clear-filters');
 document.querySelector('#close-pastes').addEventListener('click', () => pastesDialog.close());
 pastesDialog.addEventListener('click', event => { if (event.target === pastesDialog) pastesDialog.close(); });
 
 async function loadMyPastes() {
   pastesList.innerHTML = '<p class="empty-state">Loading your pastes…</p>';
-  pastesDialog.showModal();
+  if (!pastesDialog.open) pastesDialog.showModal();
   try {
-    const response = await fetch('/me/pastes', {headers: authHeaders()});
+    const filters = new FormData(pasteFilters);
+    const query = new URLSearchParams();
+    ['q','language','visibility'].forEach(name => { const value=filters.get(name)?.trim(); if(value)query.set(name,value); });
+    if (filters.get('favorite')) query.set('favorite','true');
+    clearFilters.hidden = query.size === 0;
+    const response = await fetch(`/me/pastes?${query}`, {headers: authHeaders()});
     const values = await response.json();
     if (!response.ok) throw new Error(values.error || 'Pastes could not be loaded');
+    pasteResultsStatus.textContent = `${values.length} ${values.length === 1 ? 'paste' : 'pastes'} found`;
     if (!values.length) {
-      pastesList.innerHTML = '<p class="empty-state">No pastes yet. Create one and it will appear here.</p>';
+      const filtered = query.size > 0;
+      pastesList.innerHTML = `<div class="empty-state"><strong>${filtered ? 'No matching pastes' : 'Your vault is ready'}</strong><span>${filtered ? 'Try a different search or clear the filters.' : 'Create your first paste and it will appear here.'}</span></div>`;
       return;
     }
     pastesList.innerHTML = '';
@@ -281,7 +291,11 @@ async function loadMyPastes() {
       });
       const actions = document.createElement('div');
       actions.className = 'row-actions';
-      actions.append(edit, remove);
+      const favorite = document.createElement('button');
+      favorite.type = 'button'; favorite.className = 'favorite-button'; favorite.setAttribute('aria-pressed', String(value.is_favorite)); favorite.setAttribute('aria-label', value.is_favorite ? 'Remove from favorites' : 'Add to favorites');
+      favorite.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 17.2l-5.56 2.92 1.06-6.2L3 9.53l6.22-.9L12 3Z"/></svg>';
+      favorite.addEventListener('click', async () => { favorite.disabled=true; const next=!value.is_favorite; const result=await fetch(`/pastes/${encodeURIComponent(value.slug)}/favorite`,{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({favorite:next})}); if(result.ok){value.is_favorite=next; await loadMyPastes()}else{favorite.disabled=false;window.alert('Favorite could not be updated.')} });
+      actions.append(favorite, edit, remove);
       row.append(info, actions);
       pastesList.append(row);
     });
@@ -291,3 +305,7 @@ async function loadMyPastes() {
 }
 
 myPastesButton.addEventListener('click', loadMyPastes);
+let filterTimer;
+pasteFilters.addEventListener('input', () => { clearTimeout(filterTimer); filterTimer=setTimeout(loadMyPastes,250); });
+pasteFilters.addEventListener('change', loadMyPastes);
+pasteFilters.addEventListener('reset', () => setTimeout(loadMyPastes));
