@@ -55,7 +55,12 @@ func main() {
 	cancelStartup()
 
 	pasteStore := database.NewPasteStore(pool)
-	emailSender := mailer.NewBrevo(os.Getenv("BREVO_API_KEY"), os.Getenv("MAIL_FROM_EMAIL"), os.Getenv("MAIL_FROM_NAME"))
+	var emailSender mailer.Sender
+	if os.Getenv("SMTP_ADDR") != "" {
+		emailSender = mailer.NewSMTP(os.Getenv("SMTP_ADDR"), os.Getenv("MAIL_FROM_EMAIL"))
+	} else {
+		emailSender = mailer.NewBrevo(os.Getenv("BREVO_API_KEY"), os.Getenv("MAIL_FROM_EMAIL"), os.Getenv("MAIL_FROM_NAME"))
+	}
 	authService := auth.NewService(database.NewUserStore(pool), jwtSecret, emailSender)
 	handler := httpapi.NewHandler(pasteStore, authService)
 	port := os.Getenv("PORT")

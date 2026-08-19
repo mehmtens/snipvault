@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"net/smtp"
 	"strings"
 	"time"
 )
@@ -29,6 +30,39 @@ type Brevo struct {
 	fromEmail string
 	fromName  string
 	client    *http.Client
+}
+
+type SMTP struct {
+	address   string
+	fromEmail string
+}
+
+func NewSMTP(address, fromEmail string) Sender {
+	if strings.TrimSpace(address) == "" || strings.TrimSpace(fromEmail) == "" {
+		return Unavailable{}
+	}
+	return &SMTP{address: strings.TrimSpace(address), fromEmail: strings.TrimSpace(fromEmail)}
+}
+
+func (s *SMTP) SendVerification(ctx context.Context, to, code string) error {
+	return s.send(ctx, to, "Verify your SnipVault email", fmt.Sprintf(
+		`<h1>Verify your email</h1><p>Your SnipVault verification code is:</p><p style="font:700 32px monospace;letter-spacing:8px">%s</p><p>This code expires in 15 minutes.</p>`, html.EscapeString(code)))
+}
+
+func (s *SMTP) SendPasswordReset(ctx context.Context, to, code string) error {
+	return s.send(ctx, to, "Reset your SnipVault password", fmt.Sprintf(
+		`<h1>Reset your password</h1><p>Your SnipVault reset code is:</p><p style="font:700 32px monospace;letter-spacing:8px">%s</p><p>This code expires in 15 minutes.</p>`, html.EscapeString(code)))
+}
+
+func (s *SMTP) send(ctx context.Context, to, subject, htmlContent string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	message := []byte("From: SnipVault <" + s.fromEmail + ">\r\n" +
+		"To: " + to + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" + htmlContent)
+	return smtp.SendMail(s.address, nil, s.fromEmail, []string{to}, message)
 }
 
 func NewBrevo(apiKey, fromEmail, fromName string) Sender {
