@@ -1,4 +1,12 @@
 services:
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks:
+      - snipvault_internal
+
   db:
     image: postgres:18-alpine
     restart: unless-stopped
@@ -27,14 +35,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.docker}
       PORT: "8090"
       CLEANUP_INTERVAL: "5m"
-      BREVO_API_KEY: ${BREVO_API_KEY:?Set BREVO_API_KEY in .env.docker}
-      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:?Set MAIL_FROM_EMAIL in .env.docker}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-SnipVault}
+      SMTP_ADDR: mailpit:1025
+      MAIL_FROM_EMAIL: snipvault@local.test
+      MAIL_FROM_NAME: SnipVault
     ports:
       - "8090:8090"
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/health"]
       interval: 15s

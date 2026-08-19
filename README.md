@@ -16,7 +16,7 @@ Share code and text with clean links, or keep private snippets in your personal 
 
 ## Run locally — easiest way
 
-You only need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and a free [Brevo](https://www.brevo.com/) account for verification emails.
+You only need [Docker Desktop](https://www.docker.com/products/docker-desktop/). No external database or email account is required.
 
 On Windows PowerShell:
 
@@ -26,9 +26,12 @@ cd snipvault
 .\setup.ps1
 ```
 
-The setup asks for your Brevo API key and verified sender email. Database and JWT secrets are generated automatically.
+Database and JWT secrets are generated automatically. Verification and password-reset emails are captured by a private local inbox.
 
-Then open [http://localhost:8090](http://localhost:8090).
+Open:
+
+- SnipVault: [http://localhost:8090](http://localhost:8090)
+- Local email inbox: [http://localhost:8025](http://localhost:8025)
 
 To stop SnipVault later:
 
@@ -52,9 +55,8 @@ Required values:
 
 - `POSTGRES_PASSWORD`: a strong local database password
 - `JWT_SECRET`: at least 32 random characters
-- `BREVO_API_KEY`: your Brevo transactional email API key
-- `MAIL_FROM_EMAIL`: a verified Brevo sender address
-- `MAIL_FROM_NAME`: sender name, normally `SnipVault`
+
+The Docker stack includes a local email inbox, so Brevo is not needed for local use.
 
 Never commit `.env` or `.env.docker`. Both are ignored by Git.
 
@@ -88,7 +90,7 @@ go test ./...
 - Go HTTP API and embedded HTML/CSS/JavaScript frontend
 - PostgreSQL storage with automatic embedded migrations
 - bcrypt passwords, HttpOnly JWT sessions, CSRF protection, and rate limiting
-- Brevo transactional email for verification and password recovery
+- A local test inbox in Docker; Brevo transactional email only in production
 - Neon PostgreSQL and Vercel Functions in production
 - GitHub Actions for tests, coverage, and Docker builds
 
