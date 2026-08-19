@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+func TestRequestIsSecureBehindHTTPSProxy(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "http://snipvault.test/", nil)
+	request.Header.Set("X-Forwarded-Proto", "https")
+	if !requestIsSecure(request) {
+		t.Fatal("expected forwarded HTTPS request to be secure")
+	}
+}
+
 func TestRegisterAndLogin(t *testing.T) {
 	handler := testHandler()
 	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"mehmet","email":"mehmet@example.com","password":"password123"}`))

@@ -23,8 +23,19 @@ var addPasteExpirationSQL string
 var addPasteUpdatedAtSQL string
 
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
+	connection, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer connection.Release()
+
+	if _, err := connection.Exec(ctx, `SELECT pg_advisory_lock(739_628_155)`); err != nil {
+		return err
+	}
+	defer func() { _, _ = connection.Exec(context.Background(), `SELECT pg_advisory_unlock(739_628_155)`) }()
+
 	for _, migration := range []string{createPastesSQL, createUsersSQL, addPasteOwnerSQL, addPasteExpirationSQL, addPasteUpdatedAtSQL} {
-		if _, err := pool.Exec(ctx, migration); err != nil {
+		if _, err := connection.Exec(ctx, migration); err != nil {
 			return err
 		}
 	}

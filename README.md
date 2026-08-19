@@ -2,6 +2,8 @@
 
 SnipVault is a secure Pastebin-style application for storing and sharing code or text through short, durable links. It combines a Go HTTP API, PostgreSQL persistence, an embedded responsive frontend, owner-level authorization, expiration policies, and production-oriented operations.
 
+**Live application:** [snipvault-mehmetenesaldag-8600s-projects.vercel.app](https://snipvault-mehmetenesaldag-8600s-projects.vercel.app)
+
 ## Highlights
 
 - Public, unlisted, and private pastes
@@ -40,6 +42,8 @@ Expiration cleanup worker
 ```
 
 Database migrations are embedded into the binary and run idempotently at startup.
+
+Production runs as a Go Vercel Function in Frankfurt with a pooled Neon PostgreSQL 18 connection. Database migrations use a PostgreSQL advisory lock so concurrent serverless cold starts remain safe. The long-running cleanup worker is used by the Docker service; serverless reads exclude expired pastes directly in SQL.
 
 ## Quick start with Docker
 
