@@ -16,18 +16,18 @@ func TestRequestIsSecureBehindHTTPSProxy(t *testing.T) {
 }
 
 func TestRegisterAndLogin(t *testing.T) {
-	handler := testHandler()
+	handler, sender := testHandlerWithMailer()
 	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"mehmet","email":"mehmet@example.com","password":"password123"}`))
 	registerResponse := httptest.NewRecorder()
 	handler.ServeHTTP(registerResponse, register)
-	if registerResponse.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", registerResponse.Code, registerResponse.Body.String())
+	if registerResponse.Code != http.StatusAccepted {
+		t.Fatalf("expected 202, got %d: %s", registerResponse.Code, registerResponse.Body.String())
 	}
-	if !strings.Contains(registerResponse.Body.String(), `"csrf_token"`) {
-		t.Fatal("expected CSRF token")
-	}
+	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"mehmet@example.com","code":"`+sender.verificationCode+`"}`))
+	verifyResponse := httptest.NewRecorder(); handler.ServeHTTP(verifyResponse, verify)
+	if verifyResponse.Code != http.StatusOK { t.Fatalf("verification failed: %s", verifyResponse.Body.String()) }
 	var sessionCookie *http.Cookie
-	for _, cookie := range registerResponse.Result().Cookies() {
+	for _, cookie := range verifyResponse.Result().Cookies() {
 		if cookie.Name == "snipvault_session" {
 			sessionCookie = cookie
 		}

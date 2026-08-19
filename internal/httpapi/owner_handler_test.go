@@ -8,26 +8,11 @@ import (
 	"testing"
 )
 
-func registerToken(t *testing.T, handler http.Handler) string {
-	t.Helper()
-	request := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"owner","email":"owner@example.com","password":"password123"}`))
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, request)
-	if response.Code != http.StatusCreated {
-		t.Fatalf("register failed: %s", response.Body.String())
-	}
-	for _, cookie := range response.Result().Cookies() {
-		if cookie.Name == "snipvault_session" {
-			return cookie.Value
-		}
-	}
-	t.Fatal("session cookie not found")
-	return ""
-}
-
 func TestPrivatePasteOwnership(t *testing.T) {
-	handler := testHandler()
-	token := registerToken(t, handler)
+	handler, sender := testHandlerWithMailer()
+	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"owner","email":"owner@example.com","password":"password123"}`)); registered := httptest.NewRecorder(); handler.ServeHTTP(registered, register)
+	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"owner@example.com","code":"`+sender.verificationCode+`"}`)); verified := httptest.NewRecorder(); handler.ServeHTTP(verified, verify)
+	var token string; for _, cookie := range verified.Result().Cookies() { if cookie.Name == "snipvault_session" { token = cookie.Value } }; if token == "" { t.Fatal("session cookie not found") }
 
 	create := httptest.NewRequest(http.MethodPost, "/pastes", strings.NewReader(`{"title":"Secret","content":"private text","visibility":"private"}`))
 	create.Header.Set("Authorization", "Bearer "+token)
@@ -89,15 +74,16 @@ func TestPrivatePasteOwnership(t *testing.T) {
 }
 
 func TestCookieAuthenticationRequiresCSRF(t *testing.T) {
-	handler := testHandler()
+	handler, sender := testHandlerWithMailer()
 	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"username":"cookieuser","email":"cookie@example.com","password":"password123"}`))
 	registered := httptest.NewRecorder()
 	handler.ServeHTTP(registered, register)
+	verify := httptest.NewRequest(http.MethodPost, "/verify-email", strings.NewReader(`{"email":"cookie@example.com","code":"`+sender.verificationCode+`"}`)); verified := httptest.NewRecorder(); handler.ServeHTTP(verified, verify)
 	var body struct {
 		CSRFToken string `json:"csrf_token"`
 	}
-	_ = json.Unmarshal(registered.Body.Bytes(), &body)
-	cookies := registered.Result().Cookies()
+	_ = json.Unmarshal(verified.Body.Bytes(), &body)
+	cookies := verified.Result().Cookies()
 
 	withoutCSRF := httptest.NewRequest(http.MethodPost, "/pastes", strings.NewReader(`{"content":"protected","visibility":"private"}`))
 	for _, cookie := range cookies {

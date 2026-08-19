@@ -17,6 +17,7 @@ import (
 	"snipvault/internal/cleanup"
 	"snipvault/internal/database"
 	"snipvault/internal/httpapi"
+	"snipvault/internal/mailer"
 )
 
 func main() {
@@ -54,7 +55,8 @@ func main() {
 	cancelStartup()
 
 	pasteStore := database.NewPasteStore(pool)
-	authService := auth.NewService(database.NewUserStore(pool), jwtSecret)
+	emailSender := mailer.NewBrevo(os.Getenv("BREVO_API_KEY"), os.Getenv("MAIL_FROM_EMAIL"), os.Getenv("MAIL_FROM_NAME"))
+	authService := auth.NewService(database.NewUserStore(pool), jwtSecret, emailSender)
 	handler := httpapi.NewHandler(pasteStore, authService)
 	port := os.Getenv("PORT")
 	if port == "" {
