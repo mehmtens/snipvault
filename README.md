@@ -1,77 +1,64 @@
 # SnipVault
 
-SnipVault is a secure Pastebin-style application for storing and sharing code or text through short, durable links. It combines a Go HTTP API, PostgreSQL persistence, an embedded responsive frontend, owner-level authorization, expiration policies, and production-oriented operations.
+Share code and text with clean links, or keep private snippets in your personal vault.
 
-**Live application:** [snipvault-mehmetenesaldag-8600s-projects.vercel.app](https://snipvault-mehmetenesaldag-8600s-projects.vercel.app)
+[Open SnipVault](https://snipvault-mehmetenesaldag-8600s-projects.vercel.app) · [API docs](https://snipvault-mehmetenesaldag-8600s-projects.vercel.app/docs)
 
-## Highlights
+## What you can do
 
-- Public, unlisted, and private pastes
-- Secure random slugs and raw-text links
-- Syntax highlighting for ten languages
-- Registration and login with bcrypt password hashing
-- HttpOnly JWT session cookies, SameSite protection, and CSRF validation
-- Owner-only listing, editing, and deletion
-- Paste expiration and background database cleanup
-- IP rate limiting and stricter authentication limits
-- CSP and defensive HTTP headers
-- Structured JSON request logs and request IDs
-- Graceful shutdown and server timeouts
-- Multi-stage Docker image and PostgreSQL Compose stack
-- GitHub Actions quality and image-build checks
+- Create public, unlisted, or private snippets
+- Share a formatted page, raw text, or downloaded file
+- Set snippets to expire automatically
+- Register with email verification
+- Search and filter your personal vault
+- Mark important snippets as favorites
+- Edit, delete, and manage your account securely
 
-## Architecture
+## Run locally — easiest way
 
-```text
-Browser / API client
-        │
-        ▼
-Go HTTP server
-  ├── Security headers, request IDs, logging, rate limiting
-  ├── Authentication and CSRF validation
-  ├── Paste and user handlers
-  └── Embedded HTML, CSS, and JavaScript
-        │
-        ▼
-PostgreSQL
-  ├── users
-  └── pastes
-        ▲
-        │
-Expiration cleanup worker
-```
+You only need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and a free [Brevo](https://www.brevo.com/) account for verification emails.
 
-Database migrations are embedded into the binary and run idempotently at startup.
-
-Production runs as a Go Vercel Function in Frankfurt with a pooled Neon PostgreSQL 18 connection. Database migrations use a PostgreSQL advisory lock so concurrent serverless cold starts remain safe. The long-running cleanup worker is used by the Docker service; serverless reads exclude expired pastes directly in SQL.
-
-## Quick start with Docker
-
-Requirements: Docker Desktop with Docker Compose.
+On Windows PowerShell:
 
 ```powershell
-Copy-Item .env.docker.example .env.docker
-notepad .env.docker
-docker compose --env-file .env.docker up --build -d
+git clone https://github.com/mehmtens/snipvault.git
+cd snipvault
+.\setup.ps1
 ```
 
-Open:
+The setup asks for your Brevo API key and verified sender email. Database and JWT secrets are generated automatically.
 
-- Application: `http://localhost:8090`
-- API documentation: `http://localhost:8090/docs`
-- OpenAPI specification: `http://localhost:8090/openapi.yaml`
-- Health endpoint: `http://localhost:8090/health`
+Then open [http://localhost:8090](http://localhost:8090).
 
-Inspect or stop the stack:
+To stop SnipVault later:
 
 ```powershell
-docker compose --env-file .env.docker ps
 docker compose --env-file .env.docker down
 ```
 
-Normal `down` preserves PostgreSQL data.
+Your database is preserved when the containers stop.
 
-## Local development
+## Manual Docker setup
+
+Use this path on macOS/Linux or when you prefer to configure everything yourself:
+
+```bash
+cp .env.docker.example .env.docker
+# Fill in the values in .env.docker
+docker compose --env-file .env.docker up --build -d
+```
+
+Required values:
+
+- `POSTGRES_PASSWORD`: a strong local database password
+- `JWT_SECRET`: at least 32 random characters
+- `BREVO_API_KEY`: your Brevo transactional email API key
+- `MAIL_FROM_EMAIL`: a verified Brevo sender address
+- `MAIL_FROM_NAME`: sender name, normally `SnipVault`
+
+Never commit `.env` or `.env.docker`. Both are ignored by Git.
+
+## Development without Docker
 
 Requirements: Go 1.26 and PostgreSQL 18.
 
@@ -81,85 +68,44 @@ notepad .env
 go run ./cmd/api
 ```
 
-| Variable | Purpose | Example |
-| --- | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection URL | `postgres://postgres:password@localhost:5432/snipvault?sslmode=disable` |
-| `JWT_SECRET` | JWT HMAC key; minimum 32 characters | Random 256-bit value |
-| `BREVO_API_KEY` | Brevo transactional email API key | Brevo SMTP & API dashboard |
-| `MAIL_FROM_EMAIL` | Verified Brevo sender address | `hello@example.com` |
-| `MAIL_FROM_NAME` | Sender display name | `SnipVault` |
-| `PORT` | HTTP listen port | `8090` |
-| `CLEANUP_INTERVAL` | Expired-paste cleanup frequency | `5m` |
+The application runs at `http://localhost:8090`.
 
-Never commit `.env` or `.env.docker`. Both are ignored by Git and excluded from Docker build context.
-
-## API overview
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/health` | Service health |
-| `POST` | `/register` | Create an unverified account and email a code |
-| `POST` | `/verify-email` | Verify email and start session |
-| `POST` | `/resend-verification` | Send a new verification code |
-| `POST` | `/login` | Start session |
-| `POST` | `/logout` | End session |
-| `POST` | `/forgot-password` | Email a password reset code |
-| `POST` | `/reset-password` | Reset password with a valid code |
-| `GET/PATCH` | `/me/profile` | Read or update profile |
-| `GET` | `/me/pastes?q=&language=&visibility=&favorite=` | Search and filter owned pastes |
-| `PATCH` | `/pastes/{slug}/favorite` | Add or remove an owned paste from favorites |
-| `POST` | `/me/password` | Change password |
-| `DELETE` | `/me/account` | Permanently delete account |
-| `POST` | `/pastes` | Create paste |
-| `GET` | `/pastes/{slug}` | Read visible paste |
-| `GET` | `/raw/{slug}` | Read raw content |
-| `PUT` | `/pastes/{slug}` | Update owned paste |
-| `DELETE` | `/pastes/{slug}` | Delete owned paste |
-| `GET` | `/me/pastes` | List owned active pastes |
-
-Browser authentication uses an HttpOnly session cookie and `X-CSRF-Token` for state-changing requests. Programmatic clients can use `Authorization: Bearer <token>`.
-
-## Security model
-
-- Passwords are hashed with bcrypt and never returned by the API.
-- Session JWTs expire after 24 hours and are stored in HttpOnly cookies.
-- Private paste lookups return `404` to avoid revealing existence.
-- Cookie-based state changes require constant-time CSRF validation.
-- API bodies are limited to 1 MB and reject unknown JSON fields.
-- Rate limiting is applied per client IP; authentication uses a stricter limit.
-- Content is HTML-escaped before syntax highlighting.
-- CSP, frame protection, MIME protection, permissions policy, and referrer policy are enabled.
-
-For public deployment, terminate TLS at a trusted reverse proxy and configure trusted proxy handling before using forwarded client-IP headers.
-
-## Tests and quality
+## Useful commands
 
 ```powershell
-gofmt -w .
-go vet ./...
+# Check containers
+docker compose --env-file .env.docker ps
+
+# Follow application logs
+docker compose --env-file .env.docker logs -f api
+
+# Run tests
 go test ./...
-& go 'test' '-covermode=atomic' '-coverprofile=coverage.out' './...'
-& go 'tool' 'cover' '-func=coverage.out'
 ```
 
-GitHub Actions checks formatting, static analysis, race-enabled tests, coverage, and the production Docker build. Dependabot monitors Go modules, Docker images, and Actions dependencies.
+## How it is built
 
-## Project layout
+- Go HTTP API and embedded HTML/CSS/JavaScript frontend
+- PostgreSQL storage with automatic embedded migrations
+- bcrypt passwords, HttpOnly JWT sessions, CSRF protection, and rate limiting
+- Brevo transactional email for verification and password recovery
+- Neon PostgreSQL and Vercel Functions in production
+- GitHub Actions for tests, coverage, and Docker builds
+
+Detailed endpoint documentation is available at `/docs` and `/openapi.yaml` after starting the application.
+
+## Project structure
 
 ```text
-cmd/api/                 Application entrypoint
-internal/auth/           Password and JWT service
-internal/cleanup/        Expiration worker
-internal/database/       PostgreSQL stores and migrations
-internal/httpapi/        HTTP handlers and embedded frontend
-internal/middleware/     Rate limiting, logging, security headers
-internal/paste/          Paste domain and store contract
-internal/user/           User domain and store contract
-.github/workflows/       CI pipeline
-compose.yaml             API and PostgreSQL stack
-Dockerfile               Production image
+cmd/api/              Application entrypoint
+internal/auth/        Authentication and sessions
+internal/database/    PostgreSQL stores and migrations
+internal/httpapi/     API handlers and embedded frontend
+internal/paste/       Snippet domain logic
+internal/user/        User domain logic
+serverless/           Vercel function adapter
 ```
 
 ## License
 
-No license has been selected yet. Add one before accepting external contributions.
+No license has been selected yet.
