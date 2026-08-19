@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "regions": ["fra1"],
+  "rewrites": [
+    { "source": "/", "destination": "/api/index.go" },
+    { "source": "/health", "destination": "/api/index.go" },
+    { "source": "/register", "destination": "/api/index.go" },
+    { "source": "/login", "destination": "/api/index.go" },
+    { "source": "/logout", "destination": "/api/index.go" },
+    { "source": "/pastes/:path*", "destination": "/api/index.go" },
+    { "source": "/raw/:path*", "destination": "/api/index.go" },
+    { "source": "/me/:path*", "destination": "/api/index.go" },
+    { "source": "/p/:path*", "destination": "/api/index.go" },
+    { "source": "/assets/:path*", "destination": "/api/index.go" },
+    { "source": "/docs", "destination": "/api/index.go" },
+    { "source": "/openapi.yaml", "destination": "/api/index.go" }
+  ]
+}

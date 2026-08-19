@@ -5,3 +5,8 @@
 bin/
 coverage.out
 coverage
+.vercel/
+
+.vercel
+.env*
+.neon

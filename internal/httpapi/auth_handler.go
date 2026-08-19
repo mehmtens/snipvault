@@ -70,7 +70,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) writeAuthSession(w http.ResponseWriter, r *http.Request, status int, value user.User, token string) {
 	csrfToken := randomToken()
-	secure := r.TLS != nil
+	secure := requestIsSecure(r)
 	http.SetCookie(w, &http.Cookie{Name: "snipvault_session", Value: token, Path: "/", MaxAge: 86400, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
 	http.SetCookie(w, &http.Cookie{Name: "snipvault_csrf", Value: csrfToken, Path: "/", MaxAge: 86400, HttpOnly: false, Secure: secure, SameSite: http.SameSiteStrictMode})
 	writeJSON(w, status, map[string]any{"user": value, "csrf_token": csrfToken})
@@ -81,10 +81,14 @@ func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusForbidden, map[string]string{"error": "invalid CSRF token"})
 		return
 	}
-	secure := r.TLS != nil
+	secure := requestIsSecure(r)
 	http.SetCookie(w, &http.Cookie{Name: "snipvault_session", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
 	http.SetCookie(w, &http.Cookie{Name: "snipvault_csrf", Value: "", Path: "/", MaxAge: -1, HttpOnly: false, Secure: secure, SameSite: http.SameSiteStrictMode})
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func requestIsSecure(r *http.Request) bool {
+	return r.TLS != nil || strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
 }
 
 func randomToken() string {
