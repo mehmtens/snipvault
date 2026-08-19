@@ -47,6 +47,9 @@ func TestHomePage(t *testing.T) {
 	if !strings.Contains(response.Body.String(), "SnipVault") {
 		t.Fatal("expected SnipVault home page")
 	}
+	if !strings.Contains(response.Body.String(), "app.js?v=") {
+		t.Fatal("expected versioned frontend assets")
+	}
 }
 
 func TestDocumentationEndpoints(t *testing.T) {

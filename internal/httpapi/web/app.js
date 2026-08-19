@@ -168,7 +168,7 @@ if (savedUser && !sessionStorage.getItem('snipvault_csrf')) {
 	sessionStorage.removeItem('snipvault_token');
 	savedUser = null;
 }
-function syncAccount(user) { savedUser = user; accountButton.textContent = user ? user.username : 'Sign in'; myPastesButton.hidden = !user; }
+function syncAccount(user) { savedUser = user || null; accountButton.textContent = user?.username || 'Sign in'; myPastesButton.hidden = !user?.username; }
 if (savedUser) syncAccount(savedUser);
 
 accountButton.addEventListener('click', async () => {
@@ -189,7 +189,13 @@ document.querySelectorAll('.auth-tab').forEach(tab => tab.addEventListener('clic
 }));
 
 function showAuthPanel(id) { ['login-panel','register-panel','verify-panel','forgot-panel','reset-panel'].forEach(name => document.querySelector(`#${name}`).hidden = name !== id); document.querySelector('.auth-tabs').hidden = !['login-panel','register-panel'].includes(id); }
-function storeSession(result) { sessionStorage.setItem('snipvault_csrf', result.csrf_token); sessionStorage.setItem('snipvault_user', JSON.stringify(result.user)); syncAccount(result.user); authDialog.close(); }
+function storeSession(result) {
+  if (!result?.user?.username || !result?.csrf_token) throw new Error('Your session could not be started. Refresh the page and try again.');
+  sessionStorage.setItem('snipvault_csrf', result.csrf_token);
+  sessionStorage.setItem('snipvault_user', JSON.stringify(result.user));
+  syncAccount(result.user);
+  authDialog.close();
+}
 
 async function submitAuth(form, endpoint) {
   const formData = new FormData(form);
