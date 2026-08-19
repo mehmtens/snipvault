@@ -1,4 +1,8 @@
-# SnipVault
+<p align="center">
+  <img src="internal/httpapi/web/logo-lockup.svg" alt="SnipVault" width="264">
+</p>
+
+<p align="center"><strong>A secure, focused vault for code and text.</strong></p>
 
 Share code and text with clean links, or keep private snippets in your personal vault.
 
