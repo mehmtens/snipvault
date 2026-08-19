@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07151f">
   <title>API documentation — SnipVault</title>
-  <link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="/assets/pro-theme.css">
+  <link rel="icon" href="/assets/favicon.svg?v=20260819.4" type="image/svg+xml"><link rel="stylesheet" href="/assets/app.css?v=20260819.4"><link rel="stylesheet" href="/assets/pro-theme.css?v=20260819.4">
   <style>
     .docs{width:min(920px,calc(100% - 32px));margin:0 auto;padding:64px 0 96px}.docs h1{font-size:clamp(42px,7vw,76px)}
     .docs-lede{color:var(--color-muted-foreground);font-size:18px;line-height:1.7;max-width:680px}.docs-grid{display:grid;gap:12px;margin-top:48px}
@@ -13,7 +13,7 @@
     @media(max-width:560px){.endpoint{grid-template-columns:1fr}.endpoint p{grid-column:1}}
   </style>
 </head>
-<body><header class="site-header"><a class="brand" href="/"><span class="brand-mark">S/</span><span>SnipVault</span></a><span class="status"><i></i> API v1</span></header>
+<body><header class="site-header"><a class="brand" href="/" aria-label="SnipVault home"><img class="brand-mark" src="/assets/logo-mark.svg?v=20260819.4" alt="" width="42" height="42"><span class="brand-wordmark">Snip<span>Vault</span></span></a><span class="status"><i></i> API v1</span></header>
 <main class="docs"><p class="eyebrow">Developer reference</p><h1>Small API.<br><em>Clear contracts.</em></h1><p class="docs-lede">Create, protect, retrieve, update and expire code pastes. Browser sessions use HttpOnly cookies and CSRF protection; API clients may use Bearer tokens.</p>
 <a class="spec-link" href="/openapi.yaml">Download OpenAPI 3.1 specification</a>
 <section class="docs-grid" aria-label="Endpoints">
